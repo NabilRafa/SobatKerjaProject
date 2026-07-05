@@ -1,12 +1,13 @@
 import { prisma } from '../../config/db.js';
 
-export async function applyToJob(applicantId, jobId) {
+export async function applyToJob(applicantId, jobId, cvId) {
   const job = await prisma.jobPosting.findUnique({ where: { id: jobId } });
   if (!job) throw { status: 404, message: 'Lowongan tidak ditemukan' };
   if (job.status !== 'OPEN') throw { status: 400, message: 'Lowongan sudah ditutup' };
 
-  const cv = await prisma.cV.findUnique({ where: { userId: applicantId } });
-  if (!cv) throw { status: 400, message: 'Anda harus membuat CV terlebih dahulu sebelum melamar' };
+  const cv = await prisma.cV.findUnique({ where: { id: cvId } });
+  if (!cv) throw { status: 404, message: 'CV tidak ditemukan' };
+  if (cv.userId !== applicantId) throw { status: 403, message: 'CV ini bukan milik Anda' };
 
   const existing = await prisma.application.findUnique({
     where: { jobId_applicantId: { jobId, applicantId } },
@@ -14,7 +15,7 @@ export async function applyToJob(applicantId, jobId) {
   if (existing) throw { status: 409, message: 'Anda sudah melamar lowongan ini' };
 
   return prisma.application.create({
-    data: { jobId, applicantId },
+    data: { jobId, applicantId, cvId },
   });
 }
 
@@ -46,9 +47,9 @@ export async function getApplicantsForJob(employerId, jobId) {
         select: {
           id: true,
           profile: { select: { fullName: true, photoUrl: true, location: true, phone: true } },
-          cv: { select: { pdfUrl: true } },
         },
       },
+      cv: { select: { id: true, label: true, pdfUrl: true } },
     },
   });
 }

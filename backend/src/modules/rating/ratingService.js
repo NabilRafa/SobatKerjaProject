@@ -24,8 +24,10 @@ export async function createRating(fromUserId, applicationId, { score, comment }
 
   const toUserId = isEmployer ? application.applicantId : application.job.employerId;
 
-  const existing = await prisma.rating.findUnique({ where: { applicationId } });
-  if (existing) throw { status: 409, message: 'Rating untuk lamaran ini sudah pernah diberikan' };
+  const existing = await prisma.rating.findUnique({
+    where: { applicationId_fromUserId: { applicationId, fromUserId } },
+  });
+  if (existing) throw { status: 409, message: 'Anda sudah memberikan rating untuk lamaran ini' };
 
   return prisma.rating.create({
     data: { applicationId, fromUserId, toUserId, score, comment },

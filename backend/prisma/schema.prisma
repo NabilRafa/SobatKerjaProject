@@ -19,7 +19,7 @@ model User {
   otpExpiresAt  DateTime?
 
   profile       Profile?
-  cv            CV?
+  cvs           CV[]
   jobPostings   JobPosting[]  @relation("Employer")
   applications  Application[]
   sentMessages  Message[]
@@ -60,13 +60,16 @@ model Portfolio {
 
 model CV {
   id          String   @id @default(uuid())
-  userId      String   @unique
+  userId      String
   user        User     @relation(fields: [userId], references: [id])
+  label       String
   templateId  String
   dataJson    Json
   pdfUrl      String?
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  applications Application[]
 }
 
 model JobPosting {
@@ -96,9 +99,11 @@ model Application {
   job         JobPosting @relation(fields: [jobId], references: [id])
   applicantId String
   applicant   User     @relation(fields: [applicantId], references: [id])
+  cvId        String
+  cv          CV       @relation(fields: [cvId], references: [id])
   status      AppStatus @default(PENDING)
   appliedAt   DateTime @default(now())
-  rating      Rating?
+  ratings     Rating[]
 
   @@unique([jobId, applicantId])
 }
@@ -140,7 +145,7 @@ model Message {
 
 model Rating {
   id            String      @id @default(uuid())
-  applicationId String      @unique
+  applicationId String
   application   Application @relation(fields: [applicationId], references: [id])
   fromUserId    String
   fromUser      User        @relation("RatingFrom", fields: [fromUserId], references: [id])
@@ -149,6 +154,8 @@ model Rating {
   score         Int
   comment       String?     @db.Text
   createdAt     DateTime    @default(now())
+
+  @@unique([applicationId, fromUserId])
 }
 
 model Report {

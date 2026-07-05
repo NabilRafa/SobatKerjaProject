@@ -3,24 +3,18 @@ import { prisma } from '../../config/db.js';
 export async function getProfileByUserId(userId) {
   const profile = await prisma.profile.findUnique({
     where: { userId },
-    include: {
-      user: { select: { id: true, email: true, role: true, createdAt: true } },
-    },
+    include: { user: { select: { id: true, email: true, role: true, createdAt: true } } },
   });
 
-  if (!profile) {
-    throw { status: 404, message: 'Profil tidak ditemukan' };
-  }
+  if (!profile) throw { status: 404, message: 'Profil tidak ditemukan' };
 
-  const cv = await prisma.cV.findUnique({
+  const cvs = await prisma.cV.findMany({
     where: { userId },
-    select: { pdfUrl: true, isPublished: true },
-  });
-
-  const portfolios = await prisma.portfolio.findMany({
-    where: { userId },
+    select: { id: true, label: true, pdfUrl: true, isPublished: true, templateId: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
   });
+
+  const portfolios = await prisma.portfolio.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
 
   const ratingAgg = await prisma.rating.aggregate({
     where: { toUserId: userId },
@@ -30,7 +24,7 @@ export async function getProfileByUserId(userId) {
 
   return {
     ...profile,
-    cv: cv || null,
+    cvs,
     portfolios,
     rating: {
       average: ratingAgg._avg.score ? Math.round(ratingAgg._avg.score * 10) / 10 : 0,

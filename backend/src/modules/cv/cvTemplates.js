@@ -36,11 +36,13 @@ function renderTemplate1(data) {
       .item h3 { margin-bottom: 2px; }
       .period { color: #777; font-size: 12px; margin: 0 0 4px; }
       .skill { display: inline-block; background: #eee; padding: 4px 10px; margin: 4px 4px 0 0; border-radius: 4px; font-size: 12px; }
+      .contact { color: #555; font-size: 12px; margin-bottom: 16px; }
     </style>
   </head>
   <body>
     <h1>${fullName || ''}</h1>
     <p class="position">${position || ''}</p>
+    <p class="contact">${data.email || ''} &nbsp;|&nbsp; ${data.phone || ''} &nbsp;|&nbsp; ${data.address || ''}</p>
 
     <h2>Ringkasan</h2>
     <p>${summary || '-'}</p>
@@ -107,12 +109,14 @@ function renderTemplate2(data) {
       .company { margin: 0; font-size: 13px; color: #1e5f74; font-weight: 600; }
       .period { color: #888; font-size: 12px; margin: 2px 0 6px; }
       .skill-pill { display: inline-block; background: #1e5f74; color: #fff; padding: 5px 12px; margin: 4px 6px 0 0; border-radius: 20px; font-size: 12px; }
+      .header .contact { font-size: 12px; margin-top: 8px; opacity: 0.85; }
     </style>
   </head>
   <body>
     <div class="header">
       <h1>${fullName || ''}</h1>
       <p class="position">${position || ''}</p>
+      <p class="contact">${data.email || ''} &nbsp;•&nbsp; ${data.phone || ''} &nbsp;•&nbsp; ${data.address || ''}</p>
     </div>
     <div class="body-content">
       <h2>Ringkasan</h2>
@@ -171,12 +175,14 @@ function renderTemplate3(data) {
       .item h3 { margin: 0 0 2px; font-size: 16px; }
       .company-period { color: #777; font-size: 12px; font-style: italic; margin: 0 0 6px; }
       .skills-line { text-align: center; font-size: 13px; color: #555; }
+      .contact { color: #999; font-size: 12px; margin-bottom: 4px; }  
     </style>
   </head>
   <body>
     <div class="center">
       <h1>${fullName || ''}</h1>
       <p class="position">${position || ''}</p>
+      <p class="contact">${data.email || ''} &nbsp;·&nbsp; ${data.phone || ''} &nbsp;·&nbsp; ${data.address || ''}</p>
       <hr class="divider" />
       <p>${summary || '-'}</p>
     </div>

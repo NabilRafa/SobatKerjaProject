@@ -12,6 +12,7 @@ import ratingRoutes from './src/modules/rating/ratingRoutes.js';
 import reportRoutes from './src/modules/report/reportRoutes.js';
 import adminRoutes from './src/modules/admin/adminRoutes.js';
 import portfolioRoutes from './src/modules/portfolio/portfolioRoutes.js';
+import masterdataRoutes from './src/modules/masterdata/masterdataRoutes.js';
 
 dotenv.config();
 
@@ -36,3 +37,4 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/masterdata', masterdataRoutes);
