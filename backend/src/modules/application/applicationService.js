@@ -1,6 +1,10 @@
 import { prisma } from '../../config/db.js';
 
-export async function applyToJob(applicantId, jobId, cvId) {
+export async function applyToJob(applicantId, jobId, { cvId, contactName, contactPhone, appliedSkill, portfolioUrls }) {
+  if (!cvId || !contactName || !contactPhone) {
+    throw { status: 400, message: 'CV, nama, dan nomor telepon wajib diisi' };
+  }
+
   const job = await prisma.jobPosting.findUnique({ where: { id: jobId } });
   if (!job) throw { status: 404, message: 'Lowongan tidak ditemukan' };
   if (job.status !== 'OPEN') throw { status: 400, message: 'Lowongan sudah ditutup' };
@@ -15,7 +19,15 @@ export async function applyToJob(applicantId, jobId, cvId) {
   if (existing) throw { status: 409, message: 'Anda sudah melamar lowongan ini' };
 
   return prisma.application.create({
-    data: { jobId, applicantId, cvId },
+    data: {
+      jobId,
+      applicantId,
+      cvId,
+      contactName,
+      contactPhone,
+      appliedSkill: appliedSkill || null,
+      portfolioUrls: portfolioUrls || [],
+    },
   });
 }
 

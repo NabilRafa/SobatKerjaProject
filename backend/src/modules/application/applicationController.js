@@ -5,7 +5,7 @@ import {
 
 export async function apply(req, res) {
   try {
-    const application = await applyToJob(req.user.id, req.body.jobId, req.body.cvId);
+    const application = await applyToJob(req.user.id, req.body.jobId, req.body);
     return res.status(201).json(application);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message || 'Terjadi kesalahan server' });

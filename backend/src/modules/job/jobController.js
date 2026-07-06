@@ -41,7 +41,7 @@ export async function search(req, res) {
 
 export async function detail(req, res) {
   try {
-    const job = await getJobDetail(req.params.id);
+    const job = await getJobDetail(req.params.id, req.user.id);
     return res.status(200).json(job);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message || 'Terjadi kesalahan server' });

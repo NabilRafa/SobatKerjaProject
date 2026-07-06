@@ -5,10 +5,13 @@ function withAvailableSlot(job) {
 }
 
 export async function createJob(employerId, data) {
-  const { title, description, category, location, totalSlot, requiredSkills } = data;
+  const {
+    title, description, category, location,
+    totalSlot, requiredSkills, salaryAmount, salaryType, requirements,
+  } = data;
 
-  if (!title || !description || !category || !location) {
-    throw { status: 400, message: 'Semua field wajib diisi' };
+  if (!title || !description || !category || !location || !salaryAmount) {
+    throw { status: 400, message: 'Semua field wajib diisi, termasuk gaji' };
   }
 
   return prisma.jobPosting.create({
@@ -20,6 +23,9 @@ export async function createJob(employerId, data) {
       location,
       totalSlot: totalSlot ? Number(totalSlot) : 1,
       requiredSkills: requiredSkills || [],
+      salaryAmount: Number(salaryAmount),
+      salaryType: salaryType || 'PER_HARI',
+      requirements: requirements || [],
     },
   });
 }
@@ -30,7 +36,10 @@ export async function updateJob(employerId, jobId, data) {
   if (!job) throw { status: 404, message: 'Lowongan tidak ditemukan' };
   if (job.employerId !== employerId) throw { status: 403, message: 'Anda tidak berhak mengubah lowongan ini' };
 
-  const { title, description, category, location, status, requiredSkills } = data;
+  const {
+    title, description, category, location, status,
+    requiredSkills, salaryAmount, salaryType, requirements,
+  } = data;
 
   return prisma.jobPosting.update({
     where: { id: jobId },
@@ -41,6 +50,9 @@ export async function updateJob(employerId, jobId, data) {
       ...(location && { location }),
       ...(status && { status }),
       ...(requiredSkills && { requiredSkills }),
+      ...(salaryAmount && { salaryAmount: Number(salaryAmount) }),
+      ...(salaryType && { salaryType }),
+      ...(requirements && { requirements }),
     },
   });
 }
@@ -86,16 +98,43 @@ export async function searchJobs({ page = 1, limit = 10, category, location, key
   };
 }
 
-export async function getJobDetail(jobId) {
+export async function getJobDetail(jobId, currentUserId) {
   const job = await prisma.jobPosting.findUnique({
     where: { id: jobId },
     include: {
-      employer: { select: { id: true, profile: { select: { fullName: true, photoUrl: true, location: true } } } },
+      employer: {
+        select: { id: true, profile: { select: { fullName: true, photoUrl: true, location: true } } },
+      },
     },
   });
 
   if (!job) throw { status: 404, message: 'Lowongan tidak ditemukan' };
-  return withAvailableSlot(job);
+
+  const employerRatingAgg = await prisma.rating.aggregate({
+    where: { toUserId: job.employerId },
+    _avg: { score: true },
+    _count: { score: true },
+  });
+
+  let myApplication = null;
+  if (currentUserId) {
+    myApplication = await prisma.application.findUnique({
+      where: { jobId_applicantId: { jobId, applicantId: currentUserId } },
+      select: { id: true, status: true },
+    });
+  }
+
+  return {
+    ...withAvailableSlot(job),
+    employer: {
+      ...job.employer,
+      rating: {
+        average: employerRatingAgg._avg.score ? Math.round(employerRatingAgg._avg.score * 10) / 10 : 0,
+        total: employerRatingAgg._count.score,
+      },
+    },
+    myApplication,
+  };
 }
 
 export async function getMyJobs(employerId) {

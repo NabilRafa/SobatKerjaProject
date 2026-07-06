@@ -80,6 +80,9 @@ model JobPosting {
   description    String        @db.Text
   category       String
   location       String
+  salaryAmount   Decimal       @db.Decimal(12, 2)
+  salaryType     SalaryType    @default(PER_HARI)
+  requirements   Json?
   totalSlot      Int           @default(1)
   filledSlot     Int           @default(0)
   requiredSkills Json?
@@ -93,17 +96,26 @@ enum JobStatus {
   CLOSED
 }
 
+enum SalaryType {
+  PER_HARI
+  PER_BULAN
+}
+
 model Application {
-  id          String   @id @default(uuid())
-  jobId       String
-  job         JobPosting @relation(fields: [jobId], references: [id])
-  applicantId String
-  applicant   User     @relation(fields: [applicantId], references: [id])
-  cvId        String
-  cv          CV       @relation(fields: [cvId], references: [id])
-  status      AppStatus @default(PENDING)
-  appliedAt   DateTime @default(now())
-  ratings     Rating[]
+  id            String    @id @default(uuid())
+  jobId         String
+  job           JobPosting @relation(fields: [jobId], references: [id])
+  applicantId   String
+  applicant     User      @relation(fields: [applicantId], references: [id])
+  cvId          String
+  cv            CV        @relation(fields: [cvId], references: [id])
+  contactName   String
+  contactPhone  String
+  appliedSkill  String?
+  portfolioUrls Json?
+  status        AppStatus @default(PENDING)
+  appliedAt     DateTime  @default(now())
+  ratings       Rating[]
 
   @@unique([jobId, applicantId])
 }
