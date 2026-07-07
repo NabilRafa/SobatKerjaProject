@@ -34,7 +34,27 @@ export async function getProfileByUserId(userId) {
     };
   }
 
-  export async function getPublicProfileByUserId(targetUserId) {
+  // WORKER: lengkap dengan bio, skills, cv, portfolio
+  const cvs = await prisma.cV.findMany({
+    where: { userId },
+    select: { id: true, label: true, pdfUrl: true, isPublished: true, templateId: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const portfolios = await prisma.portfolio.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return {
+    ...profile,
+    cvs,
+    portfolios,
+    rating,
+  };
+}
+
+export async function getPublicProfileByUserId(targetUserId) {
   const profile = await prisma.profile.findUnique({
     where: { userId: targetUserId },
     include: { user: { select: { id: true, role: true } } },
@@ -84,26 +104,6 @@ export async function getProfileByUserId(userId) {
     photoUrl: profile.photoUrl,
     bio: profile.bio,
     skills: profile.skills,
-    cvs,
-    portfolios,
-    rating,
-  };
-}
-
-  // WORKER: lengkap dengan bio, skills, cv, portfolio
-  const cvs = await prisma.cV.findMany({
-    where: { userId },
-    select: { id: true, label: true, pdfUrl: true, isPublished: true, templateId: true, createdAt: true },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const portfolios = await prisma.portfolio.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  return {
-    ...profile,
     cvs,
     portfolios,
     rating,

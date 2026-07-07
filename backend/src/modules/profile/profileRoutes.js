@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { verifyToken } from '../../middleware/authMiddleware.js';
 import { uploadProfilePhoto } from '../../middleware/upload.js';
-import { getMyProfile, updateMyProfile, uploadMyPhoto } from './profileController.js';
+import { getMyProfile, updateMyProfile, uploadMyPhoto, getPublicProfile } from './profileController.js';
 
 const router = Router();
 
