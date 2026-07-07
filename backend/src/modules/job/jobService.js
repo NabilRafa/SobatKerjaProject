@@ -6,12 +6,12 @@ function withAvailableSlot(job) {
 
 export async function createJob(employerId, data) {
   const {
-    title, description, category, location,
-    totalSlot, requiredSkills, salaryAmount, salaryType, requirements,
+    title, description, locationArea, fullAddress,
+    totalSlot, salaryAmount, salaryType, requirements,
   } = data;
 
-  if (!title || !description || !category || !location || !salaryAmount) {
-    throw { status: 400, message: 'Semua field wajib diisi, termasuk gaji' };
+  if (!title || !description || !locationArea || !fullAddress || !salaryAmount) {
+    throw { status: 400, message: 'Semua field wajib diisi, termasuk lokasi dan gaji' };
   }
 
   return prisma.jobPosting.create({
@@ -19,10 +19,9 @@ export async function createJob(employerId, data) {
       employerId,
       title,
       description,
-      category,
-      location,
+      locationArea,
+      fullAddress,
       totalSlot: totalSlot ? Number(totalSlot) : 1,
-      requiredSkills: requiredSkills || [],
       salaryAmount: Number(salaryAmount),
       salaryType: salaryType || 'PER_HARI',
       requirements: requirements || [],
@@ -37,8 +36,8 @@ export async function updateJob(employerId, jobId, data) {
   if (job.employerId !== employerId) throw { status: 403, message: 'Anda tidak berhak mengubah lowongan ini' };
 
   const {
-    title, description, category, location, status,
-    requiredSkills, salaryAmount, salaryType, requirements,
+    title, description, locationArea, fullAddress, status,
+    salaryAmount, salaryType, requirements,
   } = data;
 
   return prisma.jobPosting.update({
@@ -46,10 +45,9 @@ export async function updateJob(employerId, jobId, data) {
     data: {
       ...(title && { title }),
       ...(description && { description }),
-      ...(category && { category }),
-      ...(location && { location }),
+      ...(locationArea && { locationArea }),
+      ...(fullAddress && { fullAddress }),
       ...(status && { status }),
-      ...(requiredSkills && { requiredSkills }),
       ...(salaryAmount && { salaryAmount: Number(salaryAmount) }),
       ...(salaryType && { salaryType }),
       ...(requirements && { requirements }),
@@ -67,13 +65,12 @@ export async function deleteJob(employerId, jobId) {
   return { message: 'Lowongan berhasil dihapus' };
 }
 
-export async function searchJobs({ page = 1, limit = 10, category, location, keyword }) {
+export async function searchJobs({ page = 1, limit = 10, locationArea, keyword }) {
   const skip = (page - 1) * limit;
 
   const where = {
     status: 'OPEN',
-    ...(category && { category: { contains: category } }),
-    ...(location && { location: { contains: location } }),
+    ...(locationArea && { locationArea: { contains: locationArea } }),
     ...(keyword && { title: { contains: keyword } }),
   };
 
@@ -84,9 +81,7 @@ export async function searchJobs({ page = 1, limit = 10, category, location, key
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
       include: {
-        employer: {
-          select: { id: true, profile: { select: { fullName: true, photoUrl: true } } },
-        },
+        employer: { select: { id: true, profile: { select: { fullName: true, photoUrl: true } } } },
       },
     }),
     prisma.jobPosting.count({ where }),
@@ -156,38 +151,23 @@ export async function getRecommendedJobs(workerId, { page = 1, limit = 10 }) {
   }
 
   const textMatchConditions = skills.flatMap((skill) => ([
-    { category: { contains: skill } },
     { title: { contains: skill } },
     { description: { contains: skill } },
   ]));
 
-  const [textMatchJobs, allOpenJobs] = await Promise.all([
+  const [items, total] = await Promise.all([
     prisma.jobPosting.findMany({
       where: { status: 'OPEN', OR: textMatchConditions },
+      skip: (page - 1) * limit,
+      take: Number(limit),
+      orderBy: { createdAt: 'desc' },
       include: { employer: { select: { id: true, profile: { select: { fullName: true, photoUrl: true } } } } },
     }),
-    prisma.jobPosting.findMany({
-      where: { status: 'OPEN' },
-      include: { employer: { select: { id: true, profile: { select: { fullName: true, photoUrl: true } } } } },
-    }),
+    prisma.jobPosting.count({ where: { status: 'OPEN', OR: textMatchConditions } }),
   ]);
 
-  const skillMatchJobs = allOpenJobs.filter((job) => {
-    const required = Array.isArray(job.requiredSkills) ? job.requiredSkills : [];
-    return required.some((reqSkill) => skills.includes(reqSkill));
-  });
-
-  const merged = new Map();
-  [...textMatchJobs, ...skillMatchJobs].forEach((job) => merged.set(job.id, job));
-
-  const allMatches = Array.from(merged.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const total = allMatches.length;
-  const skip = (page - 1) * limit;
-  const items = allMatches.slice(skip, skip + Number(limit)).map(withAvailableSlot);
-
   return {
-    items,
+    items: items.map(withAvailableSlot),
     pagination: { page: Number(page), limit: Number(limit), total, totalPages: Math.ceil(total / limit) },
   };
 }

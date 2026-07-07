@@ -3,6 +3,34 @@ import { prisma } from '../../config/db.js';
 import { generatePdfFromHtml } from '../../utils/pdfGenerator.js';
 import { renderCvTemplate, getAvailableTemplates } from './cvTemplates.js';
 
+async function buildFullCvData(userId, dataJson) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  return {
+    ...dataJson,
+    fullName: user.profile?.fullName || dataJson.fullName || '',
+    contact: {
+      phone: user.profile?.phone || '',
+      email: user.email || '',
+      location: user.profile?.location || '',
+    },
+  };
+}
+
+export async function previewCv(userId, templateId, dataJson) {
+  const validTemplateIds = getAvailableTemplates().map(t => t.id);
+  if (!validTemplateIds.includes(templateId)) {
+    throw { status: 400, message: 'Template tidak valid' };
+  }
+
+  const fullData = await buildFullCvData(userId, dataJson);
+  const html = renderCvTemplate(templateId, fullData);
+  return generatePdfFromHtml(html);
+}
+
 export async function createCv(userId, label, dataJson, templateId = 'template1') {
   const validTemplateIds = getAvailableTemplates().map(t => t.id);
   if (!validTemplateIds.includes(templateId)) {
@@ -12,34 +40,14 @@ export async function createCv(userId, label, dataJson, templateId = 'template1'
     throw { status: 400, message: 'Label CV wajib diisi, contoh: "CV Tukang Bangunan"' };
   }
 
-  const contactInfo = await getContactInfo(userId);
-  const finalDataJson = {
-    ...dataJson,
-    email: dataJson.email || contactInfo.email,
-    phone: dataJson.phone || contactInfo.phone,
-    address: dataJson.address || contactInfo.address,
-  };
-
-  const html = renderCvTemplate(templateId, finalDataJson);
+  const fullData = await buildFullCvData(userId, dataJson);
+  const html = renderCvTemplate(templateId, fullData);
   const pdfBuffer = await generatePdfFromHtml(html);
   const pdfUrl = await uploadPdfToCloudinary(pdfBuffer, userId);
 
   return prisma.cV.create({
-    data: { userId, label, templateId, dataJson: finalDataJson, pdfUrl },
+    data: { userId, label, templateId, dataJson, pdfUrl },
   });
-}
-
-async function getContactInfo(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { profile: true },
-  });
-
-  return {
-    email: user?.email || '',
-    phone: user?.profile?.phone || '',
-    address: user?.profile?.location || '',
-  };
 }
 
 export async function updateCv(userId, cvId, { label, dataJson, templateId }) {
@@ -48,19 +56,10 @@ export async function updateCv(userId, cvId, { label, dataJson, templateId }) {
   if (existing.userId !== userId) throw { status: 403, message: 'Anda tidak berhak mengubah CV ini' };
 
   const finalTemplateId = templateId || existing.templateId;
+  const finalDataJson = dataJson || existing.dataJson;
 
-  let finalDataJson = existing.dataJson;
-  if (dataJson) {
-    const contactInfo = await getContactInfo(userId);
-    finalDataJson = {
-      ...dataJson,
-      email: dataJson.email || contactInfo.email,
-      phone: dataJson.phone || contactInfo.phone,
-      address: dataJson.address || contactInfo.address,
-    };
-  }
-
-  const html = renderCvTemplate(finalTemplateId, finalDataJson);
+  const fullData = await buildFullCvData(userId, finalDataJson);
+  const html = renderCvTemplate(finalTemplateId, fullData);
   const pdfBuffer = await generatePdfFromHtml(html);
   const pdfUrl = await uploadPdfToCloudinary(pdfBuffer, cvId);
 

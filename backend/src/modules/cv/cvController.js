@@ -1,4 +1,4 @@
-import { createCv, updateCv, deleteCv, getMyCvs, getCvById, togglePublish } from './cvService.js';
+import { createCv, updateCv, deleteCv, getMyCvs, getCvById, togglePublish, previewCv } from './cvService.js';
 import { getAvailableTemplates } from './cvTemplates.js';
 
 export async function create(req, res) {
@@ -64,4 +64,17 @@ export async function publish(req, res) {
 
 export async function listTemplates(req, res) {
   return res.status(200).json(getAvailableTemplates());
+}
+
+export async function preview(req, res) {
+  try {
+    const { templateId, ...dataJson } = req.body;
+    const pdfBuffer = await previewCv(req.user.id, templateId, dataJson);
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', 'inline; filename="preview-cv.pdf"');
+    return res.status(200).send(pdfBuffer);
+  } catch (err) {
+    return res.status(err.status || 500).json({ message: err.message || 'Gagal membuat preview CV' });
+  }
 }

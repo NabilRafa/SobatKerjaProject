@@ -34,6 +34,62 @@ export async function getProfileByUserId(userId) {
     };
   }
 
+  export async function getPublicProfileByUserId(targetUserId) {
+  const profile = await prisma.profile.findUnique({
+    where: { userId: targetUserId },
+    include: { user: { select: { id: true, role: true } } },
+  });
+
+  if (!profile) throw { status: 404, message: 'Profil tidak ditemukan' };
+
+  const ratings = await prisma.rating.findMany({
+    where: { toUserId: targetUserId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      fromUser: { select: { id: true, profile: { select: { fullName: true, photoUrl: true } } } },
+    },
+  });
+
+  const average = ratings.length
+    ? Math.round((ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length) * 10) / 10
+    : 0;
+
+  const rating = { average, total: ratings.length, reviews: ratings };
+
+  if (profile.user.role === 'EMPLOYER') {
+    return {
+      fullName: profile.fullName,
+      phone: profile.phone,
+      location: profile.location,
+      photoUrl: profile.photoUrl,
+      rating,
+    };
+  }
+
+  const cvs = await prisma.cV.findMany({
+    where: { userId: targetUserId },
+    select: { id: true, label: true, pdfUrl: true, templateId: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const portfolios = await prisma.portfolio.findMany({
+    where: { userId: targetUserId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return {
+    fullName: profile.fullName,
+    phone: profile.phone,
+    location: profile.location,
+    photoUrl: profile.photoUrl,
+    bio: profile.bio,
+    skills: profile.skills,
+    cvs,
+    portfolios,
+    rating,
+  };
+}
+
   // WORKER: lengkap dengan bio, skills, cv, portfolio
   const cvs = await prisma.cV.findMany({
     where: { userId },

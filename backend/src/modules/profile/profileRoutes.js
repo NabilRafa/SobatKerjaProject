@@ -8,5 +8,6 @@ const router = Router();
 router.get('/me', verifyToken, getMyProfile);
 router.put('/me', verifyToken, updateMyProfile);
 router.post('/me/photo', verifyToken, uploadProfilePhoto.single('photo'), uploadMyPhoto);
+router.get('/:userId', verifyToken, getPublicProfile);
 
 export default router;

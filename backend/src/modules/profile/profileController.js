@@ -1,8 +1,17 @@
-import { getProfileByUserId, updateProfile, updateProfilePhoto } from './profileService.js';
+import { getProfileByUserId, getPublicProfileByUserId, updateProfile, updateProfilePhoto } from './profileService.js';
 
 export async function getMyProfile(req, res) {
   try {
     const profile = await getProfileByUserId(req.user.id);
+    return res.status(200).json(profile);
+  } catch (err) {
+    return res.status(err.status || 500).json({ message: err.message || 'Terjadi kesalahan server' });
+  }
+}
+
+export async function getPublicProfile(req, res) {
+  try {
+    const profile = await getPublicProfileByUserId(req.params.userId);
     return res.status(200).json(profile);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message || 'Terjadi kesalahan server' });

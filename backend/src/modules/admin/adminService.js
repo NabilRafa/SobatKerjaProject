@@ -36,7 +36,16 @@ export async function toggleUserActive(userId, isActive) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw { status: 404, message: 'User tidak ditemukan' };
 
-  return prisma.user.update({ where: { id: userId }, data: { isActive } });
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isActive },
+    select: {
+      id: true, email: true, role: true, isActive: true,
+      isVerified: true, createdAt: true,
+    },
+  });
+
+  return updated;
 }
 
 export async function takedownCv(cvId) {

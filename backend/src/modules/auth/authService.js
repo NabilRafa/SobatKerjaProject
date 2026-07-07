@@ -103,6 +103,10 @@ export async function loginUser({ email, password }) {
     throw { status: 403, message: 'Akun belum diverifikasi, silakan cek OTP di email Anda' };
   }
 
+  if (!user.isActive) {
+    throw { status: 403, message: 'Akun Anda telah disuspend. Hubungi admin untuk informasi lebih lanjut' };
+  }
+
   const token = generateToken({ id: user.id, role: user.role });
 
   return { user: sanitizeUser(user), token };
