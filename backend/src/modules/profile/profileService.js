@@ -144,3 +144,57 @@ export async function updateProfilePhoto(userId, photoUrl) {
 
   return updated;
 }
+
+export async function searchWorkers({ skill, location, page = 1, limit = 10 }) {
+  const skip = (page - 1) * Number(limit);
+
+  const profiles = await prisma.profile.findMany({
+    where: {
+      user: { role: 'WORKER' },
+      ...(location && { location: { contains: location } }),
+    },
+    include: { user: { select: { id: true } } },
+    orderBy: { fullName: 'asc' },
+  });
+
+  let filtered = profiles;
+  if (skill) {
+    const skillLower = skill.toLowerCase();
+    filtered = profiles.filter(
+      (p) => Array.isArray(p.skills) && p.skills.some((s) => String(s).toLowerCase().includes(skillLower))
+    );
+  }
+
+  const total = filtered.length;
+  const paginated = filtered.slice(skip, skip + Number(limit));
+
+  const userIds = paginated.map((p) => p.user.id);
+  const ratingAggs = await prisma.rating.groupBy({
+    by: ['toUserId'],
+    where: { toUserId: { in: userIds } },
+    _avg: { score: true },
+    _count: { score: true },
+  });
+  const ratingMap = new Map(ratingAggs.map((r) => [r.toUserId, r]));
+
+  const items = paginated.map((p) => {
+    const ratingData = ratingMap.get(p.user.id);
+    return {
+      userId: p.user.id,
+      fullName: p.fullName,
+      photoUrl: p.photoUrl,
+      location: p.location,
+      bio: p.bio,
+      skills: p.skills,
+      rating: {
+        average: ratingData?._avg.score ? Math.round(ratingData._avg.score * 10) / 10 : 0,
+        total: ratingData?._count.score || 0,
+      },
+    };
+  });
+
+  return {
+    items,
+    pagination: { page: Number(page), limit: Number(limit), total, totalPages: Math.ceil(total / limit) },
+  };
+}

@@ -1,5 +1,5 @@
 import { getProfileByUserId, getPublicProfileByUserId, updateProfile, updateProfilePhoto } from './profileService.js';
-
+import { searchWorkers as searchWorkersService } from './profileService.js';
 export async function getMyProfile(req, res) {
   try {
     const profile = await getProfileByUserId(req.user.id);
@@ -35,6 +35,17 @@ export async function uploadMyPhoto(req, res) {
 
     const updated = await updateProfilePhoto(req.user.id, req.file.path);
     return res.status(200).json(updated);
+  } catch (err) {
+    return res.status(err.status || 500).json({ message: err.message || 'Terjadi kesalahan server' });
+  }
+}
+
+
+
+export async function searchWorkers(req, res) {
+  try {
+    const result = await searchWorkersService(req.query);
+    return res.status(200).json(result);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message || 'Terjadi kesalahan server' });
   }

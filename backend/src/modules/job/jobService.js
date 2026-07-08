@@ -93,45 +93,6 @@ export async function searchJobs({ page = 1, limit = 10, locationArea, keyword }
   };
 }
 
-export async function getJobDetail(jobId, currentUserId) {
-  const job = await prisma.jobPosting.findUnique({
-    where: { id: jobId },
-    include: {
-      employer: {
-        select: { id: true, profile: { select: { fullName: true, photoUrl: true, location: true } } },
-      },
-    },
-  });
-
-  if (!job) throw { status: 404, message: 'Lowongan tidak ditemukan' };
-
-  const employerRatingAgg = await prisma.rating.aggregate({
-    where: { toUserId: job.employerId },
-    _avg: { score: true },
-    _count: { score: true },
-  });
-
-  let myApplication = null;
-  if (currentUserId) {
-    myApplication = await prisma.application.findUnique({
-      where: { jobId_applicantId: { jobId, applicantId: currentUserId } },
-      select: { id: true, status: true },
-    });
-  }
-
-  return {
-    ...withAvailableSlot(job),
-    employer: {
-      ...job.employer,
-      rating: {
-        average: employerRatingAgg._avg.score ? Math.round(employerRatingAgg._avg.score * 10) / 10 : 0,
-        total: employerRatingAgg._count.score,
-      },
-    },
-    myApplication,
-  };
-}
-
 export async function getMyJobs(employerId) {
   const jobs = await prisma.jobPosting.findMany({
     where: { employerId },
@@ -169,5 +130,43 @@ export async function getRecommendedJobs(workerId, { page = 1, limit = 10 }) {
   return {
     items: items.map(withAvailableSlot),
     pagination: { page: Number(page), limit: Number(limit), total, totalPages: Math.ceil(total / limit) },
+  };
+}
+export async function getJobDetail(jobId, currentUserId) {
+  const job = await prisma.jobPosting.findUnique({
+    where: { id: jobId },
+    include: {
+      employer: {
+        select: { id: true, profile: { select: { fullName: true, photoUrl: true, location: true } } },
+      },
+    },
+  });
+
+  if (!job) throw { status: 404, message: 'Lowongan tidak ditemukan' };
+
+  const employerRatingAgg = await prisma.rating.aggregate({
+    where: { toUserId: job.employerId },
+    _avg: { score: true },
+    _count: { score: true },
+  });
+
+  let myApplication = null;
+  if (currentUserId) {
+    myApplication = await prisma.application.findUnique({
+      where: { jobId_applicantId: { jobId, applicantId: currentUserId } },
+      select: { id: true, status: true, type: true },
+    });
+  }
+
+  return {
+    ...withAvailableSlot(job),
+    employer: {
+      ...job.employer,
+      rating: {
+        average: employerRatingAgg._avg.score ? Math.round(employerRatingAgg._avg.score * 10) / 10 : 0,
+        total: employerRatingAgg._count.score,
+      },
+    },
+    myApplication,
   };
 }
